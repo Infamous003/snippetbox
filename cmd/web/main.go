@@ -8,44 +8,45 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Infamous003/snippetbox/internal/models"
 	"github.com/jackc/pgx/v5"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
+	snippets *models.SnippetModel
 }
 
 const DATABASE_URL = "postgres://infamous:Getalife@03@localhost:5432/snippetbox"
 
 func main() {
+	// Creating a command line argument/flag for port number & parse it
+	addr := flag.String("addr", ":4000", "Port number")
+	flag.Parse()
 	// Creating a logger for informational messages and errors
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
+	fmt.Println("Connecting to database...")
+	conn, err := openDB(DATABASE_URL)
+	if err != nil {
+		log.Printf("Unable to connect to database: %v\n", err.Error())
+	}
+	fmt.Println("Database connection established!")
+	defer conn.Close(context.Background())
+
 	app := &application{
 		infoLog:  infoLog,
 		errorLog: errorLog,
+		snippets: &models.SnippetModel{DB: conn},
 	}
-	// Creating a command line argument/flag for port number
-	addr := flag.String("addr", ":4000", "Port number")
-	// Then we need to parse it
-	flag.Parse()
 
 	srv := &http.Server{
 		Addr:     *addr,
 		ErrorLog: errorLog,
 		Handler:  app.routes(),
 	}
-
-	app.infoLog.Println("Connecting to database...")
-	conn, err := openDB(DATABASE_URL)
-	if err != nil {
-		app.errorLog.Printf("Unable to connect to database: %v\n", err.Error())
-	}
-	app.infoLog.Println("Database connection established!")
-
-	defer conn.Close(context.Background())
 
 	output, err := conn.Exec(context.Background(), "SELECT * FROM snippets")
 	if err != nil {
@@ -61,7 +62,7 @@ func main() {
 }
 
 func openDB(databaseUrl string) (*pgx.Conn, error) {
-	conn, err := pgx.Connect(context.Background(), DATABASE_URL)
+	conn, err := pgx.Connect(context.Background(), databaseUrl)
 	if err != nil {
 		return nil, err
 	}

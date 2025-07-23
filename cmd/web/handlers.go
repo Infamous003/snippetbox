@@ -51,5 +51,16 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 		// http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	w.Write([]byte("Creating a new snippet..."))
+	title := "0 Snail"
+	content := "0 snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
+	expires := 7
+
+	id, err := app.snippets.Insert(title, content, expires)
+
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/snippet/view?id=%d", id), http.StatusSeeOther)
+	// w.Write([]byte("Creating a new snippet..."))
 }
