@@ -46,6 +46,7 @@ func (m *SnippetModel) Get(id int) (*Snippet, error) {
 	err := row.Scan(&snippet.ID, &snippet.Title, &snippet.Content, &snippet.Created, &snippet.Expires)
 
 	if err != nil {
+		// Here we could compare err with our own defined err from errors.go, but pgx provideds a db level error so its better to use that
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNoRecord
 		} else {
@@ -57,5 +58,31 @@ func (m *SnippetModel) Get(id int) (*Snippet, error) {
 }
 
 func (m *SnippetModel) Latest() ([]*Snippet, error) {
-	return nil, nil
+	query := `SELECT id, title, content, created, expires FROM snippets
+			  WHERE expires > CURRENT_TIMESTAMP LIMIT 10`
+	rows, err := m.DB.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	// CLosing rows in imp, dunno why
+	defer rows.Close()
+
+	snippets := []*Snippet{}
+
+	for rows.Next() {
+		s := &Snippet{}
+		err = rows.Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires)
+		if err != nil {
+			return nil, err
+		}
+
+		snippets = append(snippets, s)
+	}
+	//rows.next might return an err, so we check for it immediately after the loop ends
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return snippets, nil
 }
