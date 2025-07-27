@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 
@@ -50,7 +51,7 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(strId)
 
 	if err != nil {
-		app.errorLog.Println(err.Error())
+		app.errorLog.Println(err)
 		return
 	}
 
@@ -62,7 +63,26 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 			app.serverError(w, err)
 		}
 	}
-	fmt.Fprintf(w, "%+v", snippet)
+
+	files := []string{
+		"./ui/html/base.html",
+		"./ui/html/partials/nav.html",
+		"./ui/html/pages/view.html",
+	}
+
+	// Here we are parsing the foles
+	tmpls, err := template.ParseFiles(files...)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	data := &templateData{
+		Snippet: snippet,
+	}
+	err = tmpls.ExecuteTemplate(w, "base", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
 }
 
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
@@ -72,9 +92,9 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 		// http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	title := "0 Snail"
-	content := "0 snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
-	expires := 7
+	title := "First autumn morning"
+	content := "First autumn morning\nthe mirror I stare into\nshows my father''s face.\n\n– Murakami Kijo"
+	expires := 8
 
 	id, err := app.snippets.Insert(title, content, expires)
 
