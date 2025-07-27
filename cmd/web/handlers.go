@@ -47,11 +47,10 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
-	strId := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(strId)
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
 
-	if err != nil {
-		app.errorLog.Println(err)
+	if err != nil || id < 1 {
+		app.notFound(w)
 		return
 	}
 
@@ -62,6 +61,7 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		} else {
 			app.serverError(w, err)
 		}
+		return
 	}
 
 	files := []string{
